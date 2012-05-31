@@ -91,6 +91,7 @@ public class Hello implements EntryPoint {
 	    nameField.setText("Gwt User");
         // We can add style names to widgets
         sendButton.addStyleName("sendButton");
+        sendButton.gwt-Button{color: red;}
         
         // Focus the cursor on the name field when the app loads
         nameField.setFocus(true);
@@ -127,7 +128,18 @@ public class Hello implements EntryPoint {
              * Fired when the user clicks on the sendButton.
              */
             public void onClick(ClickEvent event) {
-                sendNameToServer();
+                if (event.getSource() == sendButton)
+                {
+                	sendNameToServer();
+                }
+                else if(event.getSource() == clearPersonButton)
+                {
+                	clearTextBox();
+                }
+                else
+                {
+                	countServerCalls();
+                }
             }
 
             /**
@@ -139,6 +151,33 @@ public class Hello implements EntryPoint {
                 }
             }
 
+	    
+	    private void countServerCalls()
+	    {
+		   
+	    	countCallService.countCall(numberOfCompletedCall, new AsyncCallback<PersonInfo>() {
+		        @Override
+		        public void onFailure(Throwable caught) {
+		            caught.printStackTrace();
+		            Window.alert("Error : " + caught.getMessage());
+		        }
+		        public void onSuccess(Integer result) {
+		        	updateCountCall(result);
+		        };
+		    });		
+	    }
+	    
+	    private void updateCountCall(Integer result)
+	    {
+	    	countCallLabel.setText(result);	
+	    }
+	    
+	    private void clearTextBox()
+	    {
+		personName.setText("");
+		personId.setText("");
+	    }
+	    
             /**
              * Send the name from the nameField to the server and wait for a response.
              */
@@ -147,7 +186,7 @@ public class Hello implements EntryPoint {
                 errorLabel.setText("");
                 String textToServer = nameField.getText();
                 if (!FieldVerifier.isValidName(textToServer)) {
-                    errorLabel.setText("Please enter more than 4 caracters");
+                    errorLabel.setText("Changed message... Please enter more than 4 caracters");
                     return;
                 }
 
@@ -155,7 +194,7 @@ public class Hello implements EntryPoint {
                 sendButton.setEnabled(false);
                 textToServerLabel.setText(textToServer);
                 serverResponseLabel.setText("");
-                
+                                
                 // Async call to greet server
                 greetingService.greetServer(textToServer,new AsyncCallback<String>() {
                             public void onFailure(Throwable caught) {
@@ -173,6 +212,26 @@ public class Hello implements EntryPoint {
                                 serverResponseLabel.setHTML(result);
                                 dialogBox.center();
                                 closeButton.setFocus(true);
+                                numberOfCompletedCall++;
+                            }
+                        });
+                
+                	// Async call to count call server
+                	countCallService.countCall(numberOfCompletedCall,new AsyncCallback<Integer>() {
+                            public void onFailure(Throwable caught) {
+                                // Show the RPC error message to the user
+                                dialogBox.setText("Remote Procedure Call - Failure");
+                                serverResponseLabel.addStyleName("serverResponseLabelError");
+                                serverResponseLabel.setHTML(SERVER_ERROR);
+                                dialogBox.center();
+                                closeButton.setFocus(true);
+                            }
+
+                            public void onSuccess(Integer result) {                                
+                                countCallLabel.setText(result);
+                                serverResponseLabel.removeStyleName("serverResponseLabelError");
+                                serverResponseLabel.setHTML(result);
+                                closeButton.setFocus(true);
                             }
                         });
             }
@@ -181,6 +240,8 @@ public class Hello implements EntryPoint {
         // Add a handler to send the name to the server
         MyHandler handler = new MyHandler();
         sendButton.addClickHandler(handler);
+        countCallButton.addClickHandler(handler);
+        clearPersonButton.addClickHandler(handler);
         nameField.addKeyUpHandler(handler);
 
         /* Layout for person information*/
